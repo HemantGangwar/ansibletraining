@@ -1,0 +1,62 @@
+---
+- hosts: dnode3
+  become: true
+  tasks:
+  - name: Ensuring rsync binary showuld be present
+    yum: name=rsync state=latest
+    tags: tag_synchronize
+
+  - name: Copying content of NFS directory into /tmp recursively
+    synchronize: src=/mnt_nfs dest=/tmp delete=yes recursive=yes
+    tags: tag_synchronize
+
+  - name: Placement of a specific file at desired location
+    file:
+      path: /mnt_nfs/pull_repos.sh
+      state: touch
+      mode: '7444'
+    tags: tag_file
+
+  - name: Placement of an entry at end of file
+    lineinfile:
+      path: /tmp/mnt_nfs/pull_repos.sh
+      insertafter: '#/usr/bin/git'
+      line: '#End of Script#'
+    tags: tag_lineinfile
+
+  - name: Adding series of lines in file
+    blockinfile:
+      path: /tmp/mnt_nfs/pull_repos.sh
+      backup: yes
+      insertafter: '#cd /var/tmp/repository/documents'
+      block: |
+        # This is a testing
+        # of multiple lines placement
+    tags: tag_blockinfile
+
+  - name: Displaying status of a file
+    stat: path=/tmp/mnt_nfs/pull_repos.sh
+    register: file_stat
+    tags: tag_stat
+
+  - name: Displaying status of file
+    debug: msg={{ file_stat.stat.checksum }}
+    tags: tag_stat
+
+  - name: Copy a file to host
+    copy:
+      src: inventory/Dynamic_Inventory_python3.py
+      dest: /tmp
+    tags: tag_copy
+
+  - name: Backup that file to new location
+    copy: src=/tmp/Dynamic_Inventory_python3.py dest=/tmp/Dynamic_Inventory_python3.py.bkp remote_src=true
+    tags: tag_copy
+
+  - name: Collecting back the files to Control node
+    fetch:
+      src: /tmp/Dynamic_Inventory_python3.py.bkp
+      dest: results/{{ inventory_hostname }}-script.txt
+      flat: no
+    tags: tag_fetch
+
